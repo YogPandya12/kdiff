@@ -4,6 +4,13 @@ import (
     "fmt"
     "os"
     "github.com/spf13/cobra" 
+	"github.com/YogPandya12/kdiff.git/pkg/diff"  
+    "github.com/YogPandya12/kdiff.git/pkg/parser"
+)
+
+var (
+    compareOutputFormat string
+    compareNoColor      bool
 )
 
 var rootCmd = &cobra.Command{
@@ -32,22 +39,68 @@ var compareCmd = &cobra.Command{
     Long: `The compare command takes two file paths as arguments and performs a detailed
 
 IGNORE_WHEN_COPYING_START
-Use code with caution.
+Use code with caution. Go
 IGNORE_WHEN_COPYING_END
 
 comparison of their Kubernetes resource definitions. This helps in identifying
 differences between configurations easily.`,
-    Args: cobra.ExactArgs(2),
+    Args: cobra.ExactArgs(2), // Ensures exactly two arguments are provided
     Run: func(cmd *cobra.Command, args []string) {
-        file1 := args[0]
-        file2 := args[1]
-        fmt.Printf("Comparing '%s' with '%s' (logic to be implemented)\n", file1, file2)
+        file1Path := args[0]
+        file2Path := args[1]
+
+        // Step 1: Parse YAML files
+        yaml1, err := parser.ParseYAMLFile(file1Path)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Error parsing %s: %v\n", file1Path, err)
+            os.Exit(1)
+        }
+
+        yaml2, err := parser.ParseYAMLFile(file2Path)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Error parsing %s: %v\n", file2Path, err)
+            os.Exit(1)
+        }
+
+        // Step 2: Convert to canonical string for line-by-line diff
+        text1, err := parser.YAMLToCanonicalString(yaml1)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Error processing %s: %v\n", file1Path, err)
+            os.Exit(1)
+        }
+
+        text2, err := parser.YAMLToCanonicalString(yaml2)
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Error processing %s: %v\n", file2Path, err)
+            os.Exit(1)
+        }
+
+        // Step 3: Perform line-by-line diff
+        diffResults := diff.LineByLine(text1, text2)
+
+        // Step 4: Display results
+        hasDifferences := false
+        for _, res := range diffResults {
+            if res.Type != "common" {
+                hasDifferences = true
+            }
+            fmt.Println(diff.FormatLineDiffResult(res, true)) // 'true' enables colored output (optional flag in future)
+        }
+
+        if !hasDifferences {
+            fmt.Println("\nNo significant differences found between the files.")
+        }
     },
 }
+
 
 func init() {
     rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(compareCmd)
+
+	// flags for compare command
+	compareCmd.Flags().StringVarP(&compareOutputFormat, "output", "o", "default", "Output format (default, json, table)")
+    compareCmd.Flags().BoolVar(&compareNoColor, "no-color", false, "Disable colorized output")
 }
 
 func Execute() {
