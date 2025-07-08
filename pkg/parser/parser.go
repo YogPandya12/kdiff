@@ -8,6 +8,26 @@ import (
     "gopkg.in/yaml.v3" 
 )
 
+func GetGVKFromObject(obj map[string]interface{}) (apiVersion string, kind string, err error) {
+    if obj == nil {
+        return "", "", fmt.Errorf("cannot get GVK from nil object")
+    }
+
+    apiV, ok := obj["apiVersion"].(string)
+    if !ok || apiV == "" {
+        return "", "", fmt.Errorf("object missing 'apiVersion' field or it's not a string")
+    }
+    apiVersion = apiV
+
+    k, ok := obj["kind"].(string)
+    if !ok || k == "" {
+        return "", "", fmt.Errorf("object missing 'kind' field or it's not a string")
+    }
+    kind = k
+
+    return apiVersion, kind, nil
+}
+
 func ParseYAMLFile(filePath string) (map[string]interface{}, error) {
     data, err := os.ReadFile(filePath)
     if err != nil {

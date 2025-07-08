@@ -11,6 +11,7 @@ import (
     "github.com/spf13/cobra" 
 	"github.com/YogPandya12/kdiff.git/pkg/diff"  
     "github.com/YogPandya12/kdiff.git/pkg/parser"
+    "github.com/YogPandya12/kdiff.git/pkg/validation"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -18,6 +19,7 @@ var (
     compareOutputFormat string
     compareNoColor      bool
     compareOutputFile   string
+    validateStrict bool
 )
 
 var rootCmd = &cobra.Command{
@@ -197,16 +199,82 @@ differences between configurations easily.`,
     },
 }
 
+var validateCmd = &cobra.Command{
+    Use:   "validate <file1> [file2...]",
+    Short: "Validates Kubernetes configuration files against OpenAPI schemas",
+    Long: `The validate command checks Kubernetes manifests for structural correctness
+and adherence to OpenAPI schema definitions for the specified Kubernetes API version.`,
+    Args: cobra.MinimumNArgs(1), 
+    Run: func(cmd *cobra.Command, args []string) {
+        // --- Schema Loader Selection ---
+        schemaLoader := &validation.DummySchemaLoader{}
 
+        // Uncomment below to use a real Kubernetes cluster via `kubectl proxy`
+        /*
+        schemaLoader, err := validation.NewDefaultSchemaLoader("http://localhost:8080")
+        if err != nil {
+            fmt.Fprintf(os.Stderr, "Error creating schema loader: %v\n", err)
+            os.Exit(1)
+        }
+        */
+
+        validatorEngine := validation.NewEngine(schemaLoader, validateStrict) 
+
+        allErrors := false
+
+        for _, filePath := range args {
+            fmt.Printf("\nValidating file: %s\n", filePath)
+
+            obj, err := parser.ParseYAMLFile(filePath)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "Error parsing %s: %v\n", filePath, err)
+                allErrors = true
+                continue
+            }
+
+            validationResults, err := validatorEngine.ValidateK8sObject(obj)
+            if err != nil {
+                fmt.Fprintf(os.Stderr, "Error during validation of %s: %v\n", filePath, err)
+                allErrors = true
+                continue
+            }
+
+            if len(validationResults) == 0 {
+                fmt.Printf("✅ %s is valid against its Kubernetes schema.\n", filePath)
+            } else {
+                allErrors = true
+                fmt.Printf("❌ %s has validation issues:\n", filePath)
+                for _, res := range validationResults {
+                    prefix := ""
+                    switch res.Severity {
+                    case "error":
+                        prefix = "\033[31mError:\033[0m"
+                    case "warning":
+                        prefix = "\033[33mWarning:\033[0m" 
+                    }
+                    fmt.Printf("  %s %s (Path: %s)\n", prefix, res.Message, res.Path)
+                }
+            }
+        }
+
+        if allErrors {
+            os.Exit(1) 
+        }
+    },
+}
 
 func init() {
     rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(compareCmd)
+    rootCmd.AddCommand(validateCmd)
 
 	// flags for compare command
 	compareCmd.Flags().StringVarP(&compareOutputFormat, "output", "o", "default", "Output format (default, json, table)")
     compareCmd.Flags().BoolVar(&compareNoColor, "no-color", false, "Disable colorized output")
     compareCmd.Flags().StringVarP(&compareOutputFile, "output-file", "f", "", "Write output to a file instead of stdout")
+
+    // flags for validate command 
+    validateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Enable strict validation (e.g., disallow unknown fields)")
 }
 
 func Execute() {
