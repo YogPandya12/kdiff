@@ -5,9 +5,9 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/YogPandya12/kdiff.git/pkg/diff"
-	"github.com/YogPandya12/kdiff.git/pkg/kube"
-	"github.com/YogPandya12/kdiff.git/pkg/parser"
+	"github.com/YogPandya12/kdelta.git/pkg/diff"
+	"github.com/YogPandya12/kdelta.git/pkg/kube"
+	"github.com/YogPandya12/kdelta.git/pkg/parser"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/YogPandya12/kdiff.git/pkg/kube"
+	"github.com/YogPandya12/kdelta.git/pkg/kube"
 )
 
 // Mock error to simulate auth failure

@@ -1,6 +1,6 @@
-# kdiff User Guide
+# kdelta User Guide
 
-This guide provides detailed instructions on how to use `kdiff` to solve common Kubernetes configuration challenges.
+This guide provides detailed instructions on how to use `kdelta` to solve common Kubernetes configuration challenges.
 
 ## 🛠️ Installation
 
@@ -10,11 +10,11 @@ This guide provides detailed instructions on how to use `kdiff` to solve common 
 ### Build from Source
 ```bash
 # Clone the repository
-git clone https://github.com/YogPandya12/kdiff.git
-cd kdiff
+git clone https://github.com/YogPandya12/kdelta.git
+cd kdelta
 
 # Build the binary
-go build -o bin/kdiff ./cmd/kdiff
+go build -o bin/kdelta ./cmd/kdelta
 
 # (Optional) Add to your PATH
 export PATH=$PATH:$(pwd)/bin
@@ -24,11 +24,11 @@ export PATH=$PATH:$(pwd)/bin
 
 ## 📖 Command Reference
 
-### 1. `kdiff compare`
+### 1. `kdelta compare`
 **Check the differences between two local YAML files.**
 
 #### 💡 Use Case
-You have a `deployment.yaml` and a `deployment-new.yaml`. You want to know exactly what changed before you commit the new version. Standard `diff` shows you raw text, but `kdiff` shows you semantic changes.
+You have a `deployment.yaml` and a `deployment-new.yaml`. You want to know exactly what changed before you commit the new version. Standard `diff` shows you raw text, but `kdelta` shows you semantic changes.
 
 #### 🛡️ How it Helps
 *   **Visual Clarity**: Instantly spot if you accidentally changed a port number or an environment variable.
@@ -37,24 +37,24 @@ You have a `deployment.yaml` and a `deployment-new.yaml`. You want to know exact
 
 #### Usage
 ```bash
-kdiff compare <file1> <file2> [flags]
+kdelta compare <file1> <file2> [flags]
 ```
 
 #### Examples
 ```bash
 # Basic comparison
-kdiff compare ./base.yaml ./modified.yaml
+kdelta compare ./base.yaml ./modified.yaml
 
 # Output as a Table (Great for PR comments)
-kdiff compare ./base.yaml ./modified.yaml --output table
+kdelta compare ./base.yaml ./modified.yaml --output table
 
 # Output as JSON (Great for automated policy checks)
-kdiff compare ./base.yaml ./modified.yaml --output json
+kdelta compare ./base.yaml ./modified.yaml --output json
 ```
 
 ---
 
-### 2. `kdiff validate`
+### 2. `kdelta validate`
 **Ensure your YAML files are valid Kubernetes objects before committing.**
 
 #### 💡 Use Case
@@ -67,21 +67,21 @@ You are writing a new manifest from scratch. You want to make sure you didn't mi
 
 #### Usage
 ```bash
-kdiff validate <file> [flags]
+kdelta validate <file> [flags]
 ```
 
 #### Examples
 ```bash
 # Validate a single file
-kdiff validate ./deployment.yaml
+kdelta validate ./deployment.yaml
 
 # Enable strict mode (fails on unknown fields)
-kdiff validate --strict ./deployment.yaml
+kdelta validate --strict ./deployment.yaml
 ```
 
 ---
 
-### 3. `kdiff live`
+### 3. `kdelta live`
 **Compare a local manifest against the live resource in your cluster.**
 
 #### 💡 Use Case
@@ -94,18 +94,18 @@ You are about to apply a change to production. You want to verify that the *only
 
 #### Usage
 ```bash
-kdiff live <file>
+kdelta live <file>
 ```
 
 #### Example
 ```bash
 # Compare local file vs live cluster
-kdiff live ./nginx-deployment.yaml
+kdelta live ./nginx-deployment.yaml
 ```
 
 ---
 
-### 4. `kdiff cluster`
+### 4. `kdelta cluster`
 **Compare resources between two different clusters or contexts.**
 
 #### 💡 Use Case
@@ -118,21 +118,21 @@ You have a `staging` cluster and a `production` cluster. They *should* be identi
 
 #### Usage
 ```bash
-kdiff cluster <context1> <context2> [flags]
+kdelta cluster <context1> <context2> [flags]
 ```
 
 #### Examples
 ```bash
 # Compare default namespace between two contexts
-kdiff cluster context-staging context-prod
+kdelta cluster context-staging context-prod
 
 # Compare specific resources
-kdiff cluster context-staging context-prod -r Deployment,Service
+kdelta cluster context-staging context-prod -r Deployment,Service
 ```
 
 ---
 
-### 5. `kdiff drift`
+### 5. `kdelta drift`
 **Check an entire directory of local manifests against the live cluster.**
 
 #### 💡 Use Case
@@ -141,16 +141,16 @@ You manage your infrastructure as code (GitOps). You want to know if the actual 
 #### 🛡️ How it Helps
 *   **GitOps Integrity**: Ensures your git repo remains the single source of truth.
 *   **Security Audit**: Detects unauthorized manual changes to the cluster.
-*   **Batch Processing**: Checks hundreds of files at once, saving you from running `kdiff live` manually for every file.
+*   **Batch Processing**: Checks hundreds of files at once, saving you from running `kdelta live` manually for every file.
 *   **Audit Trail**: Logs all detected drift events to `drift.log` for historical analysis.
 
 #### Usage
 ```bash
-kdiff drift <directory>
+kdelta drift <directory>
 ```
 
 #### Example
 ```bash
 # Check for drift
-kdiff drift ./deployments/prod
+kdelta drift ./deployments/prod
 ```

@@ -9,10 +9,10 @@ import (
 	"strings"
 	
     "github.com/spf13/cobra" 
-	"github.com/YogPandya12/kdiff.git/pkg/diff"
-	"github.com/YogPandya12/kdiff.git/pkg/kube"
-	"github.com/YogPandya12/kdiff.git/pkg/parser"
-    "github.com/YogPandya12/kdiff.git/pkg/validation"
+	"github.com/YogPandya12/kdelta.git/pkg/diff"
+	"github.com/YogPandya12/kdelta.git/pkg/kube"
+	"github.com/YogPandya12/kdelta.git/pkg/parser"
+    "github.com/YogPandya12/kdelta.git/pkg/validation"
 	"github.com/olekukonko/tablewriter"
 )
 
@@ -30,9 +30,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "kdiff",
-	Short: "Kubernetes Diff Tool",
-	Long: `kdiff is a tool for comparing Kubernetes configurations.
+	Use:   "kdelta",
+	Short: "Kubernetes Delta Tool",
+	Long: `kdelta is a tool for comparing Kubernetes configurations.
 It allows you to compare local YAML files, validate them against schemas,
 and check for differences between local files and live cluster resources.`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -53,10 +53,10 @@ and check for differences between local files and live cluster resources.`,
 
 var versionCmd = &cobra.Command{
     Use:   "version",
-    Short: "Print the version number of kdiff",
-    Long:  `All software has versions. This is kdiff's.`,
+    Short: "Print the version number of kdelta",
+    Long:  `All software has versions. This is kdelta's.`,
     Run: func(cmd *cobra.Command, args []string) {
-        fmt.Println("kdiff v0.1.0-alpha") 
+        fmt.Println("kdelta v0.1.0-alpha") 
     },
 }
 var compareCmd = &cobra.Command{

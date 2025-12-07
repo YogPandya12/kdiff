@@ -4,7 +4,9 @@ import (
     "fmt"
     "strings"
 
-    "github.com/YogPandya12/kdiff.git/pkg/parser"
+
+
+    "github.com/YogPandya12/kdelta.git/pkg/parser"
     "github.com/go-openapi/spec"
     "github.com/go-openapi/strfmt"
     "github.com/go-openapi/validate"

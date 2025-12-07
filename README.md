@@ -1,10 +1,10 @@
-# kdiff: The Kubernetes Configuration Diff & Validation Tool
+# kdelta: The Kubernetes Configuration Diff & Validation Tool
 
-**kdiff** is a powerful, developer-friendly CLI tool designed to solve the "YAML Hell" in Kubernetes. It simplifies configuration management by providing real-time validation, semantic comparison, and drift detection for your Kubernetes manifests.
+**kdelta** is a powerful, developer-friendly CLI tool designed to solve the "YAML Hell" in Kubernetes. It simplifies configuration management by providing real-time validation, semantic comparison, and drift detection for your Kubernetes manifests.
 
 ---
 
-## 🛑 The Problem: Why kdiff?
+## 🛑 The Problem: Why kdelta?
 
 Kubernetes configuration management is notoriously difficult. As your infrastructure grows, you inevitably face "YAML Hell":
 
@@ -13,16 +13,16 @@ Kubernetes configuration management is notoriously difficult. As your infrastruc
 *   **"It Works on My Machine"**: Deployments fail because of missing required fields, invalid types, or subtle schema violations that aren't caught until apply time.
 *   **Lack of Context**: Standard `diff` tools see text, not objects. They don't know that `replicas: 2` and `replicas: 3` is a scaling event, or that reordering fields in a map doesn't change the actual state.
 
-**kdiff** was built to solve these specific pain points. It's not just a text comparison tool; it's a Kubernetes-aware diff engine.
+**kdelta** was built to solve these specific pain points. It's not just a text comparison tool; it's a Kubernetes-aware diff engine.
 
 ---
 
 ## 🚀 The Solution
 
-**kdiff** acts as a specialized lens for your Kubernetes configurations. It bridges the gap between your local code (Desired State) and your running cluster (Live State).
+**kdelta** acts as a specialized lens for your Kubernetes configurations. It bridges the gap between your local code (Desired State) and your running cluster (Live State).
 
-*   **Intelligent Visualization**: See exactly *what* changed in a semantic way. kdiff highlights additions and removals with context, filtering out noise.
-*   **Proactive Validation**: Catch errors *before* they hit the cluster. kdiff validates your YAMLs against official Kubernetes schemas, ensuring structural correctness.
+*   **Intelligent Visualization**: See exactly *what* changed in a semantic way. kdelta highlights additions and removals with context, filtering out noise.
+*   **Proactive Validation**: Catch errors *before* they hit the cluster. kdelta validates your YAMLs against official Kubernetes schemas, ensuring structural correctness.
 *   **Drift Detection**: Automatically scan your infrastructure to find resources that have deviated from your git repository.
 *   **Multi-Cluster Awareness**: Easily compare configurations between Staging and Production to ensure parity.
 
@@ -34,11 +34,31 @@ For detailed usage instructions and examples, please refer to the [User Guide](d
 
 Here is a quick overview of the available commands:
 
-*   `kdiff compare`: Compares two local Kubernetes configuration files.
-*   `kdiff validate`: Validates manifests against OpenAPI schemas.
-*   `kdiff live`: Compares a local file against a live cluster resource.
-*   `kdiff cluster`: Compares resources between two clusters/contexts.
-*   `kdiff drift`: Checks for configuration drift across a directory of files.
+*   `kdelta compare`: Compares two local Kubernetes configuration files.
+*   `kdelta validate`: Validates manifests against OpenAPI schemas.
+*   `kdelta live`: Compares a local file against a live cluster resource.
+*   `kdelta cluster`: Compares resources between two clusters/contexts.
+*   `kdelta drift`: Checks for configuration drift across a directory of files.
+
+---
+
+## 🛠️ Installation
+
+### Prerequisites
+*   Go 1.24 or higher
+
+### Build from Source
+```bash
+# Clone the repository
+git clone https://github.com/YogPandya12/kdelta.git
+cd kdelta
+
+# Build the binary
+go build -o bin/kdelta ./cmd/kdelta
+
+# (Optional) Add to your PATH
+export PATH=$PATH:$(pwd)/bin
+```
 
 ---
 

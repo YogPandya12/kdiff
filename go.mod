@@ -1,4 +1,4 @@
-module github.com/YogPandya12/kdiff.git
+module github.com/YogPandya12/kdelta.git
 
 go 1.24.4
 
