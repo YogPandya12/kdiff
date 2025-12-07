@@ -15,7 +15,7 @@ func TestCLIIntegration(t *testing.T) {
 	tests := []struct {
 		name           string
 		args           []string
-		expectedOutput string // Substring to check for
+		expectedOutput string 
 		expectError    bool
 	}{
 		// --- Validate Command Tests ---
@@ -54,7 +54,7 @@ func TestCLIIntegration(t *testing.T) {
 		{
 			name:           "Compare Different Files",
 			args:           []string{"compare", filepath.Join(dataPath, "diff_base.yaml"), filepath.Join(dataPath, "diff_modified.yaml")},
-			expectedOutput: "value1-modified", // Check for specific diff content
+			expectedOutput: "value1-modified", 
 			expectError:    false,
 		},
 	}

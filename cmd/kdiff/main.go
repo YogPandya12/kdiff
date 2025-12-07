@@ -9,8 +9,9 @@ import (
 	"strings"
 	
     "github.com/spf13/cobra" 
-	"github.com/YogPandya12/kdiff.git/pkg/diff"  
-    "github.com/YogPandya12/kdiff.git/pkg/parser"
+	"github.com/YogPandya12/kdiff.git/pkg/diff"
+	"github.com/YogPandya12/kdiff.git/pkg/kube"
+	"github.com/YogPandya12/kdiff.git/pkg/parser"
     "github.com/YogPandya12/kdiff.git/pkg/validation"
 	"github.com/olekukonko/tablewriter"
 )
@@ -22,12 +23,29 @@ var (
     validateStrict bool
 )
 
+var (
+	kubeconfig string
+	context    string
+	kubeClient *kube.Client
+)
+
 var rootCmd = &cobra.Command{
-    Use:   "kdiff",
-    Short: "kdiff is a powerful CLI for comparing and validating Kubernetes configurations.",
-    Long: `A robust command-line tool designed to simplify Kubernetes configuration management.
-kdiff provides features like real-time validation, visualization of configuration differences,
-and drift detection across various environments.`,
+	Use:   "kdiff",
+	Short: "Kubernetes Diff Tool",
+	Long: `kdiff is a tool for comparing Kubernetes configurations.
+It allows you to compare local YAML files, validate them against schemas,
+and check for differences between local files and live cluster resources.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize Kubernetes client
+		// We don't error out here if connection fails, as some commands (like local diff)
+		// might not need it. Individual commands should check if kubeClient is nil or valid.
+		client, err := kube.NewClient(kubeconfig, context)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: Failed to initialize Kubernetes client: %v\n", err)
+		} else {
+			kubeClient = client
+		}
+	},
     Run: func(cmd *cobra.Command, args []string) {
         cmd.Help()
     },
