@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -56,4 +57,16 @@ func (c *Client) GetServerVersion() (string, error) {
 		return "", fmt.Errorf("failed to get server version: %w", err)
 	}
 	return version.String(), nil
+}
+
+// IsAuthError checks if the error is related to authentication or authorization
+func IsAuthError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "Unauthorized") || 
+		   strings.Contains(msg, "Forbidden") || 
+		   strings.Contains(msg, "authentication required") ||
+		   strings.Contains(msg, "invalid configuration")
 }
