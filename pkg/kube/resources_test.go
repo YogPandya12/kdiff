@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -17,12 +18,8 @@ func TestGetCoreResources(t *testing.T) {
 		DynamicClient: client,
 	}
 
-	// We can't easily pre-populate the fake client with resources because 
-	// NewSimpleDynamicClient takes runtime.Object, but we are working with Unstructured.
-	// However, the fake client should return empty lists, which is enough to test that
-	// GetCoreResources runs without error and returns the expected map keys.
-
-	resources, err := rc.GetCoreResources("default")
+	// Test 1: No filters (default behavior)
+	resources, err := rc.GetCoreResources("default", nil, "")
 	if err != nil {
 		t.Fatalf("GetCoreResources() error = %v", err)
 	}
@@ -33,6 +30,18 @@ func TestGetCoreResources(t *testing.T) {
 			t.Errorf("GetCoreResources() missing kind %s", kind)
 		}
 	}
+
+	// Test 2: Filter by Kind
+	resources, err = rc.GetCoreResources("default", []string{"Deployment"}, "")
+	if err != nil {
+		t.Fatalf("GetCoreResources() error = %v", err)
+	}
+	if len(resources) != 1 {
+		t.Errorf("Expected 1 kind, got %d", len(resources))
+	}
+	if _, ok := resources["Deployment"]; !ok {
+		t.Error("Expected Deployment kind")
+	}
 }
 
 func TestListResources(t *testing.T) {
@@ -40,7 +49,7 @@ func TestListResources(t *testing.T) {
 	rc := &ResourceClient{DynamicClient: client}
 
 	gvr := schema.GroupVersionResource{Group: "", Version: "v1", Resource: "pods"}
-	list, err := rc.ListResources(gvr, "default")
+	list, err := rc.ListResources(gvr, "default", metav1.ListOptions{})
 	if err != nil {
 		t.Errorf("ListResources() error = %v", err)
 	}

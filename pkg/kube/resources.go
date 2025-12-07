@@ -10,7 +10,6 @@ import (
 	"k8s.io/client-go/dynamic"
 )
 
-// ResourceClient handles fetching resources from Kubernetes
 type ResourceClient struct {
 	DynamicClient dynamic.Interface
 }
@@ -33,14 +32,14 @@ func NewResourceClient(client *Client) (*ResourceClient, error) {
 }
 
 // ListResources fetches resources of a specific GVR (GroupVersionResource)
-func (rc *ResourceClient) ListResources(gvr schema.GroupVersionResource, namespace string) ([]unstructured.Unstructured, error) {
+func (rc *ResourceClient) ListResources(gvr schema.GroupVersionResource, namespace string, opts metav1.ListOptions) ([]unstructured.Unstructured, error) {
 	var list *unstructured.UnstructuredList
 	var err error
 
 	if namespace == "" {
-		list, err = rc.DynamicClient.Resource(gvr).List(context.TODO(), metav1.ListOptions{})
+		list, err = rc.DynamicClient.Resource(gvr).List(context.TODO(), opts)
 	} else {
-		list, err = rc.DynamicClient.Resource(gvr).Namespace(namespace).List(context.TODO(), metav1.ListOptions{})
+		list, err = rc.DynamicClient.Resource(gvr).Namespace(namespace).List(context.TODO(), opts)
 	}
 
 	if err != nil {
@@ -51,21 +50,36 @@ func (rc *ResourceClient) ListResources(gvr schema.GroupVersionResource, namespa
 }
 
 // GetCoreResources fetches common resources (Deployments, Services, ConfigMaps, Secrets)
-func (rc *ResourceClient) GetCoreResources(namespace string) (map[string][]unstructured.Unstructured, error) {
+func (rc *ResourceClient) GetCoreResources(namespace string, kinds []string, labelSelector string) (map[string][]unstructured.Unstructured, error) {
 	resources := make(map[string][]unstructured.Unstructured)
 
 	// Define GVRs for core resources
-	gvrs := map[string]schema.GroupVersionResource{
+	allGvrs := map[string]schema.GroupVersionResource{
 		"Deployment": {Group: "apps", Version: "v1", Resource: "deployments"},
 		"Service":    {Group: "", Version: "v1", Resource: "services"},
 		"ConfigMap":  {Group: "", Version: "v1", Resource: "configmaps"},
 		"Secret":     {Group: "", Version: "v1", Resource: "secrets"},
 	}
 
-	for kind, gvr := range gvrs {
-		items, err := rc.ListResources(gvr, namespace)
+	// Filter GVRs based on requested kinds
+	targetGvrs := make(map[string]schema.GroupVersionResource)
+	if len(kinds) == 0 {
+		targetGvrs = allGvrs
+	} else {
+		for _, k := range kinds {
+			if gvr, ok := allGvrs[k]; ok {
+				targetGvrs[k] = gvr
+			}
+		}
+	}
+
+	opts := metav1.ListOptions{
+		LabelSelector: labelSelector,
+	}
+
+	for kind, gvr := range targetGvrs {
+		items, err := rc.ListResources(gvr, namespace, opts)
 		if err != nil {
-			// Log error but continue? Or fail? For now, let's fail to be explicit.
 			return nil, err
 		}
 		resources[kind] = items

@@ -10,7 +10,6 @@ import (
 	"k8s.io/client-go/util/homedir"
 )
 
-// Client wraps the Kubernetes clientset and configuration
 type Client struct {
 	Clientset kubernetes.Interface
 	Config    clientcmd.ClientConfig

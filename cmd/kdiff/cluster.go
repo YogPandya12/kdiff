@@ -12,6 +12,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+var (
+	targetNamespace string
+	allNamespaces   bool
+	targetResources []string
+	labelSelector   string
+)
+
 var clusterCmd = &cobra.Command{
 	Use:   "cluster <context1> <context2>",
 	Short: "Compare resources between two clusters/contexts",
@@ -24,7 +31,6 @@ var clusterCmd = &cobra.Command{
 		fmt.Printf("Comparing context '%s' vs '%s'...\n", context1, context2)
 
 		// Initialize clients for both contexts
-		// Note: We ignore the global --context flag here as we are explicitly passing contexts
 		client1, err := kube.NewClient(kubeconfig, context1)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error creating client for context '%s': %v\n", context1, err)
@@ -50,21 +56,32 @@ var clusterCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Fetch resources (default namespace for now, or all namespaces if we add flag later)
-		// For MVP, let's assume "default" namespace or use the context's default.
-		// Actually, ListResources with "" namespace lists all if the client supports it, or we might need to be specific.
-		// Let's use "default" for safety in MVP unless specified.
-		namespace := "default" 
+		// Determine namespace
+		namespace := targetNamespace
+		if allNamespaces {
+			namespace = "" // Empty string means all namespaces
+			fmt.Println("Fetching resources from ALL namespaces...")
+		} else {
+			if namespace == "" {
+				namespace = "default"
+			}
+			fmt.Printf("Fetching resources from namespace '%s'...\n", namespace)
+		}
 
-		fmt.Printf("Fetching resources from namespace '%s'...\n", namespace)
+		if len(targetResources) > 0 {
+			fmt.Printf("Filtering for resources: %v\n", targetResources)
+		}
+		if labelSelector != "" {
+			fmt.Printf("Filtering by label: %s\n", labelSelector)
+		}
 
-		resources1, err := rc1.GetCoreResources(namespace)
+		resources1, err := rc1.GetCoreResources(namespace, targetResources, labelSelector)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error fetching resources from '%s': %v\n", context1, err)
 			os.Exit(1)
 		}
 
-		resources2, err := rc2.GetCoreResources(namespace)
+		resources2, err := rc2.GetCoreResources(namespace, targetResources, labelSelector)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error fetching resources from '%s': %v\n", context2, err)
 			os.Exit(1)
@@ -76,6 +93,10 @@ var clusterCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(clusterCmd)
+	clusterCmd.Flags().StringVarP(&targetNamespace, "namespace", "n", "default", "Target namespace")
+	clusterCmd.Flags().BoolVarP(&allNamespaces, "all-namespaces", "A", false, "If present, list the requested object(s) across all namespaces")
+	clusterCmd.Flags().StringSliceVarP(&targetResources, "resource", "r", []string{}, "List of resources to compare (e.g., Deployment,Service)")
+	clusterCmd.Flags().StringVarP(&labelSelector, "label", "l", "", "Selector (label query) to filter on")
 }
 
 func compareResources(res1, res2 map[string][]unstructured.Unstructured) {
@@ -88,7 +109,6 @@ func compareResources(res1, res2 map[string][]unstructured.Unstructured) {
 		map1 := toMap(list1)
 		map2 := toMap(list2)
 
-		// Union of keys
 		names := make(map[string]bool)
 		for k := range map1 {
 			names[k] = true
@@ -125,7 +145,7 @@ func compareResources(res1, res2 map[string][]unstructured.Unstructured) {
 					fmt.Printf("Mismatch: %s/%s\n", kind, name)
 					// TODO: Print diff or summary
 				} else {
-					// fmt.Printf("Match: %s/%s\n", kind, name)
+					fmt.Printf("Match: %s/%s\n", kind, name)
 				}
 
 			} else if exists1 {

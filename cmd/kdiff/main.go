@@ -41,8 +41,7 @@ and check for differences between local files and live cluster resources.`,
 		// might not need it. Individual commands should check if kubeClient is nil or valid.
 		client, err := kube.NewClient(kubeconfig, context)
 		if err != nil {
-			// Just log warning for now, or maybe debug
-			// fmt.Fprintf(os.Stderr, "Warning: Failed to initialize Kubernetes client: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Warning: Failed to initialize Kubernetes client: %v\n", err)
 		} else {
 			kubeClient = client
 		}
