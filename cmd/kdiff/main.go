@@ -207,16 +207,13 @@ and adherence to OpenAPI schema definitions for the specified Kubernetes API ver
     Args: cobra.MinimumNArgs(1), 
     Run: func(cmd *cobra.Command, args []string) {
         // --- Schema Loader Selection ---
-        schemaLoader := &validation.DummySchemaLoader{}
-
-        // Uncomment below to use a real Kubernetes cluster via `kubectl proxy`
-        /*
-        schemaLoader, err := validation.NewDefaultSchemaLoader("http://localhost:8080")
+        // Initialize the real schema loader (fallback to GitHub if no API server)
+        // For MVP, we pass empty string for apiServerURL to force fallback or use default
+        schemaLoader, err := validation.NewDefaultSchemaLoader("")
         if err != nil {
-            fmt.Fprintf(os.Stderr, "Error creating schema loader: %v\n", err)
+            fmt.Fprintf(os.Stderr, "Error initializing schema loader: %v\n", err)
             os.Exit(1)
         }
-        */
 
         validatorEngine := validation.NewEngine(schemaLoader, validateStrict) 
 

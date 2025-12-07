@@ -96,8 +96,9 @@ func (e *Engine) ValidateK8sObject(obj map[string]interface{}) ([]ValidationResu
 
     // --- Step 3: Perform Validation ---
     goApiSchema := convertK8sSchemaToGoApi(schema)
-    
-    validator := validate.NewSchemaValidator(goApiSchema, nil, "", strfmt.Default)
+    fullGoApiSwagger := convertK8sSwaggerToGoApi(loadedSwagger)
+
+    validator := validate.NewSchemaValidator(goApiSchema, fullGoApiSwagger, "", strfmt.Default)
 
     validationResult := validator.Validate(obj) 
 
@@ -118,6 +119,38 @@ func (e *Engine) ValidateK8sObject(obj map[string]interface{}) ([]ValidationResu
         }
     }
     return results, nil
+}
+
+func convertK8sSwaggerToGoApi(k8sSwagger *k8sspec.Swagger) *spec.Swagger {
+	if k8sSwagger == nil {
+		return nil
+	}
+	
+	var goInfo *spec.Info
+	if k8sSwagger.Info != nil {
+		goInfo = &spec.Info{
+			InfoProps: spec.InfoProps{
+				Title:       k8sSwagger.Info.Title,
+				Description: k8sSwagger.Info.Description,
+				Version:     k8sSwagger.Info.Version,
+			},
+		}
+	}
+	
+	goSwagger := &spec.Swagger{
+		SwaggerProps: spec.SwaggerProps{
+			Swagger:     k8sSwagger.Swagger,
+			Info:        goInfo,
+			Paths:       nil, 
+			Definitions: make(map[string]spec.Schema, len(k8sSwagger.Definitions)),
+		},
+	}
+	
+	for defName, k8sDef := range k8sSwagger.Definitions {
+		goSwagger.Definitions[defName] = *convertK8sSchemaToGoApi(k8sDef)
+	}
+	
+	return goSwagger
 }
 
 func convertK8sSchemaToGoApi(k8sSchema k8sspec.Schema) *spec.Schema {
@@ -144,6 +177,12 @@ func convertK8sSchemaToGoApi(k8sSchema k8sspec.Schema) *spec.Schema {
         }
     }
 
+    // Handle Ref
+    var ref spec.Ref
+    if k8sSchema.Ref.String() != "" {
+        ref = spec.MustCreateRef(k8sSchema.Ref.String())
+    }
+
     return &spec.Schema{
         SchemaProps: spec.SchemaProps{
             Type:        goApiType,
@@ -164,6 +203,7 @@ func convertK8sSchemaToGoApi(k8sSchema k8sspec.Schema) *spec.Schema {
             Required:    k8sSchema.Required,
             Properties:  properties,
             Items:       items,
+            Ref:         ref,
         },
     }
 }

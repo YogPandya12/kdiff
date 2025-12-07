@@ -1,181 +1,169 @@
 package validation
 
 import (
-    "encoding/json"
-    "fmt"
-    "io"
-    "net/http"
-    "os"
-    "path/filepath"
-    "time"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 
-    "k8s.io/kube-openapi/pkg/validation/spec"
+	"k8s.io/kube-openapi/pkg/validation/spec"
 )
 
 type SchemaLoader interface {
-    LoadSchema(apiVersion string) (*spec.Swagger, error)
+	LoadSchema(apiVersion string) (*spec.Swagger, error)
 }
 
 type DefaultSchemaLoader struct {
-    kubeAPIServerURL string
-    cacheDir         string
-    httpClient       *http.Client
+	kubeAPIServerURL string
+	cacheDir         string
+	httpClient       *http.Client
 }
 
 func NewDefaultSchemaLoader(apiServerURL string) (*DefaultSchemaLoader, error) {
-    cacheDir, err := os.UserCacheDir()
-    if err != nil {
-        return nil, fmt.Errorf("failed to get user cache directory: %w", err)
-    }
-    kdiffCacheDir := filepath.Join(cacheDir, "kdiff", "schemas")
-    if err := os.MkdirAll(kdiffCacheDir, 0755); err != nil {
-        return nil, fmt.Errorf("failed to create kdiff schema cache directory: %w", err)
-    }
+	cacheDir, err := os.UserCacheDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user cache directory: %w", err)
+	}
+	kdiffCacheDir := filepath.Join(cacheDir, "kdiff", "schemas")
+	if err := os.MkdirAll(kdiffCacheDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create kdiff schema cache directory: %w", err)
+	}
 
-    client := &http.Client{Timeout: 10 * time.Second}
+	client := &http.Client{Timeout: 30 * time.Second}
 
-    return &DefaultSchemaLoader{
-        kubeAPIServerURL: apiServerURL,
-        cacheDir:         kdiffCacheDir,
-        httpClient:       client,
-    }, nil
+	return &DefaultSchemaLoader{
+		kubeAPIServerURL: apiServerURL,
+		cacheDir:         kdiffCacheDir,
+		httpClient:       client,
+	}, nil
 }
 
 func (l *DefaultSchemaLoader) LoadSchema(apiVersion string) (*spec.Swagger, error) {
-    cacheFilePath := filepath.Join(l.cacheDir, fmt.Sprintf("swagger-%s.json", apiVersion))
+	// Normalize apiVersion (e.g., "v1" -> "v1", "apps/v1" -> "v1.28.0-standalone")
+	// For simplicity in MVP, we might just use a fixed version or try to detect.
+	// But here we will try to cache by the exact string provided first.
+	safeVersion := strings.ReplaceAll(apiVersion, "/", "_")
+	cacheFilePath := filepath.Join(l.cacheDir, fmt.Sprintf("swagger-%s.json", safeVersion))
 
-    schema, err := l.loadSchemaFromCache(cacheFilePath)
-    if err == nil {
-        fmt.Printf("Loaded schema for %s from cache.\n", apiVersion)
-        return schema, nil
-    }
-    fmt.Printf("Cache miss or error for %s schema: %v. Fetching from API server...\n", apiVersion, err)
+	schema, err := l.loadSchemaFromCache(cacheFilePath)
+	if err == nil {
+		// fmt.Printf("Loaded schema for %s from cache.\n", apiVersion)
+		return schema, nil
+	}
+	// fmt.Printf("Cache miss for %s schema. Fetching...\n", apiVersion)
 
-    schema, err = l.fetchSchemaFromAPIServer(apiVersion)
-    if err != nil {
-        return nil, fmt.Errorf("failed to fetch schema for %s from API server: %w", apiVersion, err)
-    }
+	// Strategy 1: Fetch from API Server if URL is provided
+	if l.kubeAPIServerURL != "" {
+		schema, err = l.fetchSchemaFromAPIServer(apiVersion)
+		if err == nil {
+			if saveErr := l.saveSchemaToCache(schema, cacheFilePath); saveErr != nil {
+				fmt.Printf("Warning: Failed to save schema to cache: %v\n", saveErr)
+			}
+			return schema, nil
+		}
+		fmt.Printf("Failed to fetch from API server: %v. Trying fallback...\n", err)
+	}
 
-    if err := l.saveSchemaToCache(schema, cacheFilePath); err != nil {
-        fmt.Printf("Warning: Failed to save schema to cache for %s: %v\n", apiVersion, err)
-    }
+	// Strategy 2: Fallback to GitHub (Kubernetes upstream)
+	// We default to a recent stable version if we can't determine the exact version needed.
+	// Ideally, we should allow the user to specify the K8s version via flag.
+	// For now, let's default to v1.29.0 for the fallback.
+	k8sVersion := "v1.29.0" 
+	schema, err = l.fetchSchemaFromGitHub(k8sVersion)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch schema from GitHub fallback: %w", err)
+	}
 
-    return schema, nil
+	if saveErr := l.saveSchemaToCache(schema, cacheFilePath); saveErr != nil {
+		fmt.Printf("Warning: Failed to save schema to cache: %v\n", saveErr)
+	}
+
+	return schema, nil
 }
 
 func (l *DefaultSchemaLoader) fetchSchemaFromAPIServer(apiVersion string) (*spec.Swagger, error) {
-    url := fmt.Sprintf("%s/openapi/v2", l.kubeAPIServerURL)
-    if apiVersion != "" {
-        // This is a simplification. Real Kubernetes OpenAPI endpoints are more nuanced.
-        // Let's stick to the generic /openapi/v2 for now for a simpler start.
-    }
+	url := fmt.Sprintf("%s/openapi/v2", l.kubeAPIServerURL)
+	// Note: Real K8s API server might require auth headers. 
+	// This simple implementation assumes a proxy or open access for now, 
+	// or that the user provided a URL that includes auth (unlikely).
+	// For MVP, this is a placeholder for "connected" mode.
+	
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
 
-    fmt.Printf("Attempting to fetch schema from: %s\n", url)
-    req, err := http.NewRequest("GET", url, nil)
-    if err != nil {
-        return nil, fmt.Errorf("failed to create request: %w", err)
-    }
-    req.Header.Set("Accept", "application/json;as=Swagger")
+	resp, err := l.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make HTTP request to %s: %w", url, err)
+	}
+	defer resp.Body.Close()
 
-    resp, err := l.httpClient.Do(req)
-    if err != nil {
-        return nil, fmt.Errorf("failed to make HTTP request to %s: %w", url, err)
-    }
-    defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP status %d", resp.StatusCode)
+	}
 
-    if resp.StatusCode != http.StatusOK {
-        bodyBytes, _ := io.ReadAll(resp.Body)
-        return nil, fmt.Errorf("failed to fetch schema from %s: HTTP status %d - %s", url, resp.StatusCode, string(bodyBytes))
-    }
+	return l.parseSwagger(resp.Body)
+}
 
-    bodyBytes, err := io.ReadAll(resp.Body)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read response body: %w", err)
-    }
+func (l *DefaultSchemaLoader) fetchSchemaFromGitHub(k8sVersion string) (*spec.Swagger, error) {
+	url := fmt.Sprintf("https://raw.githubusercontent.com/kubernetes/kubernetes/%s/api/openapi-spec/swagger.json", k8sVersion)
+	// fmt.Printf("Fetching schema from GitHub: %s\n", url)
 
-    var swagger spec.Swagger
-    if err := json.Unmarshal(bodyBytes, &swagger); err != nil {
-        return nil, fmt.Errorf("failed to unmarshal OpenAPI schema: %w", err)
-    }
-    return &swagger, nil
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := l.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make HTTP request to %s: %w", url, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP status %d from GitHub", resp.StatusCode)
+	}
+
+	return l.parseSwagger(resp.Body)
+}
+
+func (l *DefaultSchemaLoader) parseSwagger(r io.Reader) (*spec.Swagger, error) {
+	bodyBytes, err := io.ReadAll(r)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	var swagger spec.Swagger
+	if err := json.Unmarshal(bodyBytes, &swagger); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal OpenAPI schema: %w", err)
+	}
+	return &swagger, nil
 }
 
 func (l *DefaultSchemaLoader) loadSchemaFromCache(filePath string) (*spec.Swagger, error) {
-    data, err := os.ReadFile(filePath)
-    if err != nil {
-        return nil, fmt.Errorf("failed to read schema from cache file %s: %w", filePath, err)
-    }
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, err
+	}
 
-    var swagger spec.Swagger
-    if err := json.Unmarshal(data, &swagger); err != nil {
-        _ = os.Remove(filePath)
-        return nil, fmt.Errorf("failed to unmarshal schema from cache file %s (corrupted?): %w", filePath, err)
-    }
-    return &swagger, nil
+	var swagger spec.Swagger
+	if err := json.Unmarshal(data, &swagger); err != nil {
+		_ = os.Remove(filePath) // Corrupted cache
+		return nil, err
+	}
+	return &swagger, nil
 }
 
 func (l *DefaultSchemaLoader) saveSchemaToCache(schema *spec.Swagger, filePath string) error {
-    data, err := json.MarshalIndent(schema, "", "  ")
-    if err != nil {
-        return fmt.Errorf("failed to marshal schema for caching: %w", err)
-    }
-
-    if err := os.WriteFile(filePath, data, 0644); err != nil {
-        return fmt.Errorf("failed to write schema to cache file %w", err)
-    }
-    return nil
-}
-
-type DummySchemaLoader struct{}
-
-func (d *DummySchemaLoader) LoadSchema(apiVersion string) (*spec.Swagger, error) {
-    fmt.Printf("Using dummy schema loader for API version: %s\n", apiVersion)
-    dummySchema := &spec.Swagger{
-        SwaggerProps: spec.SwaggerProps{
-            Swagger:     "2.0",
-            Info:        &spec.Info{InfoProps: spec.InfoProps{Title: "Dummy Kubernetes API", Version: "v1.0"}},
-            Paths:       &spec.Paths{},
-            Definitions: map[string]spec.Schema{
-                "io.k8s.api.apps.v1.Deployment": {
-                    SchemaProps: spec.SchemaProps{
-                        Type: []string{"object"},
-                        Properties: map[string]spec.Schema{
-                            "apiVersion": {SchemaProps: spec.SchemaProps{Type: []string{"string"}}},
-                            "kind":       {SchemaProps: spec.SchemaProps{Type: []string{"string"}}},
-                            "metadata":   {SchemaProps: spec.SchemaProps{Type: []string{"object"}}},
-                            "spec": {
-                                SchemaProps: spec.SchemaProps{
-                                    Type: []string{"object"},
-                                    Properties: map[string]spec.Schema{
-                                        "replicas": {SchemaProps: spec.SchemaProps{Type: []string{"integer"}, Format: "int32"}},
-                                    },
-                                },
-                            },
-                        },
-                        Required: []string{"apiVersion", "kind", "metadata", "spec"},
-                    },
-                },
-                "io.k8s.api.core.v1.Pod": { // Add Pod for testing
-                    SchemaProps: spec.SchemaProps{
-                        Type: []string{"object"},
-                        Properties: map[string]spec.Schema{
-                            "apiVersion": {SchemaProps: spec.SchemaProps{Type: []string{"string"}}},
-                            "kind":       {SchemaProps: spec.SchemaProps{Type: []string{"string"}}},
-                            "metadata":   {SchemaProps: spec.SchemaProps{Type: []string{"object"}}},
-                            "spec": {
-                                SchemaProps: spec.SchemaProps{
-                                    Type: []string{"object"},
-                                    Properties: map[string]spec.Schema{
-                                        "containers": {SchemaProps: spec.SchemaProps{Type: []string{"array"}}},
-                                    },
-                                },
-                            },
-                        },
-                        Required: []string{"apiVersion", "kind", "metadata", "spec"},
-                    },
-                },
-            },
-        },
-    }
-    return dummySchema, nil
+	data, err := json.Marshal(schema) // Save compact to save space, or Indent for readability
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, data, 0644)
 }
