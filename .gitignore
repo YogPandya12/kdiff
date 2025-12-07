@@ -20,4 +20,4 @@ vendor/
 *.yaml
 !tests/data/*.yaml
 
-chats/
+# chats/

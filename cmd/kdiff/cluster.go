@@ -142,10 +142,28 @@ func compareResources(res1, res2 map[string][]unstructured.Unstructured) {
 				}
 
 				if hasDiff {
-					fmt.Printf("Mismatch: %s/%s\n", kind, name)
-					// TODO: Print diff or summary
+					additions := 0
+					deletions := 0
+					for _, d := range diffs {
+						if d.Type == "added" {
+							additions++
+						} else if d.Type == "removed" {
+							deletions++
+						}
+					}
+					fmt.Printf("Mismatch: %s/%s (+%d, -%d)\n", kind, name, additions, deletions)
+
+					// Print detailed diff
+					for _, d := range diffs {
+						if d.Type == "added" {
+							fmt.Printf("  + %s\n", d.Line)
+						} else if d.Type == "removed" {
+							fmt.Printf("  - %s\n", d.Line)
+						}
+					}
+					fmt.Println() // Add a newline for separation
 				} else {
-					fmt.Printf("Match: %s/%s\n", kind, name)
+					// fmt.Printf("Match: %s/%s\n", kind, name)
 				}
 
 			} else if exists1 {
