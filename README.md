@@ -10,118 +10,68 @@
 
 ## 🛑 The Problem: Why kdiff?
 
-Managing Kubernetes configurations across multiple environments (Development, Staging, Production) is a known pain point for developers:
+Kubernetes configuration management is notoriously difficult. As your infrastructure grows, you inevitably face "YAML Hell":
 
-*   **Configuration Drift**: Small, unnoticed changes between environments lead to "it works on my machine" but fails in production.
-*   **YAML Complexity**: Manually comparing 1000+ line YAML files to find a single changed environment variable is tedious and error-prone.
-*   **Deployment Failures**: Invalid syntax or missing required fields (like `apiVersion` or `kind`) often crash pipelines only *after* code is pushed.
-*   **Lack of Visualization**: Standard `diff` tools don't understand Kubernetes structure—they just see text.
+*   **Configuration Drift**: The silent killer of stability. A developer tweaks a deployment in staging, forgets to commit it, and suddenly production behaves differently. Standard tools don't track this well.
+*   **YAML Complexity & Blindness**: Kubernetes manifests can be thousands of lines long. Manually diffing them to find a single changed environment variable or label is like finding a needle in a haystack.
+*   **"It Works on My Machine"**: Deployments fail because of missing required fields, invalid types, or subtle schema violations that aren't caught until apply time.
+*   **Lack of Context**: Standard `diff` tools see text, not objects. They don't know that `replicas: 2` and `replicas: 3` is a scaling event, or that reordering fields in a map doesn't change the actual state.
 
-**kdiff** was built to address these niche but critical challenges that standard tools like `kubectl diff` or `helm` don't fully solve for the average developer.
+**kdiff** was built to solve these specific pain points. It's not just a text comparison tool; it's a Kubernetes-aware diff engine.
 
 ---
 
 ## 🚀 The Solution
 
-**kdiff** is an "Enhanced Configuration Management Tool" that acts as your safety net. It understands Kubernetes schemas and structure, allowing you to:
+**kdiff** acts as a specialized lens for your Kubernetes configurations. It bridges the gap between your local code (Desired State) and your running cluster (Live State).
 
-1.  **Visualize Differences**: See exactly what changed between two manifests (e.g., `replicas: 2` vs `replicas: 3`) in a color-coded, human-readable format.
-2.  **Validate Instantly**: Catch syntax errors, missing fields, and schema violations *before* you apply them to your cluster.
-3.  **Prevent Drift**: Ensure your Development and Production environments stay in sync by highlighting unintended discrepancies.
-
----
-
-## ✨ Features
-
-*   **🔍 Semantic Comparison**: Compares YAML files line-by-line but understands the structure.
-    *   *Supports JSON and Table output formats for CI/CD integration.*
-*   **✅ Strict Validation**: Validates your manifests against official Kubernetes OpenAPI schemas.
-    *   *Detects missing required fields, invalid types, and unknown fields.*
-*   **🎨 Rich Visualization**: Color-coded terminal output makes it easy to spot additions (green) and deletions (red).
-*   **⚡ Fast & Lightweight**: Built in Go for instant execution.
-
----
-
-## 🛠️ Installation
-
-### Prerequisites
-*   Go 1.24 or higher
-
-### Build from Source
-```bash
-# Clone the repository
-git clone https://github.com/YogPandya12/kdiff.git
-cd kdiff
-
-# Build the binary
-go build -o bin/kdiff ./cmd/kdiff
-
-# (Optional) Add to your PATH
-export PATH=$PATH:$(pwd)/bin
-```
+*   **Intelligent Visualization**: See exactly *what* changed in a semantic way. kdiff highlights additions and removals with context, filtering out noise.
+*   **Proactive Validation**: Catch errors *before* they hit the cluster. kdiff validates your YAMLs against official Kubernetes schemas, ensuring structural correctness.
+*   **Drift Detection**: Automatically scan your infrastructure to find resources that have deviated from your git repository.
+*   **Multi-Cluster Awareness**: Easily compare configurations between Staging and Production to ensure parity.
 
 ---
 
 ## 📖 Usage
 
-### 1. Compare Configurations
-Check the differences between your local development file and production configuration.
+For detailed usage instructions and examples, please refer to the [User Guide](docs/usage.md).
 
-```bash
-# Basic comparison
-kdiff compare ./tests/data/diff_base.yaml ./tests/data/diff_modified.yaml
+Here is a quick overview of the available commands:
 
-# Output as a Table (Great for reports)
-kdiff compare ./tests/data/diff_base.yaml ./tests/data/diff_modified.yaml --output table
+*   `kdiff compare`: Compares two local Kubernetes configuration files.
+*   `kdiff validate`: Validates manifests against OpenAPI schemas.
+*   `kdiff live`: Compares a local file against a live cluster resource.
+*   `kdiff cluster`: Compares resources between two clusters/contexts.
+*   `kdiff drift`: Checks for configuration drift across a directory of files.
 
-# Output as JSON (Great for CI/CD parsing)
-kdiff compare ./tests/data/diff_base.yaml ./tests/data/diff_modified.yaml --output json
-```
+---
 
-**Output Example:**
-```text
-COMMON  | 1 | apiVersion: v1
-COMMON  | 2 | kind: ConfigMap
-REMOVED | 5 |   key: value1
-ADDED   | 5 |   key: value1-modified
-```
+## 🚧 Project Status
 
-### 2. Validate Manifests
-Ensure your YAML files are valid Kubernetes objects before committing.
+**Current Status**: 🟢 **Active Development**
 
-```bash
-# Validate a single file
-kdiff validate ./tests/data/valid_deployment.yaml
+I have successfully built the core CLI foundation and integrated it with live Kubernetes clusters. The tool is functional for local comparison, live drift detection, and multi-cluster analysis.
 
-# Validate multiple files
-kdiff validate ./tests/data/valid_deployment.yaml ./tests/data/invalid_pod.yaml
-
-# Enable strict mode (fails on unknown fields)
-kdiff validate --strict ./tests/data/valid_deployment.yaml
-```
-
-**Output Example:**
-```text
-✅ ./tests/data/valid_deployment.yaml is valid against its Kubernetes schema.
-❌ ./tests/data/invalid_missing_kind.yaml has validation issues:
-  Error: missing 'kind' field (Path: root)
-```
+I am actively working on **Advanced Diff Intelligence**, which will bring semantic diffing (understanding the *meaning* of changes, not just text) and smarter filtering.
 
 ---
 
 ## 🛣️ Roadmap
 
-We are building a complete ecosystem for Kubernetes Configuration Management:
+I am building a complete ecosystem for Kubernetes Configuration Management:
 
-*   [x] **Phase 1: CLI Tool** (Current) - Local validation and comparison.
-*   [ ] **Phase 2: Web Dashboard** - A graphical interface to visualize diffs and manage configs via a browser.
-*   [ ] **Phase 3: Kubernetes Operator** - Automated in-cluster drift detection and synchronization.
+*   [x] **Phase 1: Foundation (MVP)** - Core CLI, YAML parsing, basic diffing, validation.
+*   [x] **Phase 2: Cluster Integration** - `client-go` integration, live comparison, drift detection, multi-cluster support.
+*   [ ] **Phase 3: Advanced Diff Intelligence** - Semantic diffing, ignore rules, smart defaults handling.
+*   [ ] **Phase 4: Validation & Security** - Policy integration, security checks.
+*   [ ] **Phase 5: Automation & Integration** - CI/CD pipelines, continuous monitoring.
+*   [ ] **Phase 6: Advanced Features** - Plugin system, visualization.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+I am building this tool in the open and would love for other developers to join me! Whether it's fixing a bug, adding a new feature, or improving documentation, your contributions are welcome.
 
 1.  Fork the Project
 2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
