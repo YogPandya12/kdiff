@@ -6,7 +6,6 @@ import (
 	"k8s.io/kube-openapi/pkg/validation/spec"
 )
 
-// MockSchemaLoader for testing
 type MockSchemaLoader struct {
 	schemas map[string]*spec.Swagger
 }
@@ -15,11 +14,10 @@ func (m *MockSchemaLoader) LoadSchema(apiVersion string) (*spec.Swagger, error) 
 	if schema, ok := m.schemas[apiVersion]; ok {
 		return schema, nil
 	}
-	return nil, nil // Return nil if not found (simulating error or missing schema)
+	return nil, nil 
 }
 
 func TestValidateK8sObject(t *testing.T) {
-	// Define a simple schema for testing
 	podSchema := &spec.Swagger{
 		SwaggerProps: spec.SwaggerProps{
 			Swagger: "2.0",
@@ -94,7 +92,7 @@ func TestValidateK8sObject(t *testing.T) {
 				"apiVersion": "v1",
 				"kind":       "Unknown",
 			},
-			wantErr: true, // Should fail because schema for Unknown is not found
+			wantErr: true, 
 		},
 	}
 
@@ -102,14 +100,12 @@ func TestValidateK8sObject(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			results, err := engine.ValidateK8sObject(tt.obj)
 			if err != nil {
-				// If we expect an error (like schema loading failure), this is fine
 				if !tt.wantErr {
 					t.Errorf("ValidateK8sObject() unexpected error = %v", err)
 				}
 				return
 			}
 
-			// If we got results, check if we have validation errors
 			hasValidationErrors := len(results) > 0
 			if hasValidationErrors != tt.wantErr {
 				t.Errorf("ValidateK8sObject() hasErrors = %v, wantErr %v. Results: %v", hasValidationErrors, tt.wantErr, results)
