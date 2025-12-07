@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: diff-test
+data:
+  key1: value1-modified # Modified
+  # key2: value2 (Deleted)
+  key3: value3
+  key4: value4 # Added

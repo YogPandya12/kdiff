@@ -1,7 +1,6 @@
 
 bin/
   
-
 .vscode/  
 .idea/    
 
@@ -19,5 +18,6 @@ vendor/
 *.swp
 
 *.yaml
+!tests/data/*.yaml
 
 chats/
