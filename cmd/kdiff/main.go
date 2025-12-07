@@ -282,6 +282,7 @@ func init() {
     rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(compareCmd)
     rootCmd.AddCommand(validateCmd)
+    rootCmd.AddCommand(liveCmd)
 
 	// flags for compare command
 	compareCmd.Flags().StringVarP(&compareOutputFormat, "output", "o", "default", "Output format (default, json, table)")

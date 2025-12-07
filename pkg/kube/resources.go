@@ -87,3 +87,8 @@ func (rc *ResourceClient) GetCoreResources(namespace string, kinds []string, lab
 
 	return resources, nil
 }
+
+// GetResource fetches a specific resource by name
+func (rc *ResourceClient) GetResource(gvr schema.GroupVersionResource, namespace string, name string) (*unstructured.Unstructured, error) {
+	return rc.DynamicClient.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+}
