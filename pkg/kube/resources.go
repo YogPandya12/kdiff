@@ -43,6 +43,9 @@ func (rc *ResourceClient) ListResources(gvr schema.GroupVersionResource, namespa
 	}
 
 	if err != nil {
+		if IsAuthError(err) {
+			return nil, fmt.Errorf("authentication failed for %v: %w. Please check your kubeconfig and credentials", gvr.Resource, err)
+		}
 		return nil, fmt.Errorf("failed to list resources for %v: %w", gvr, err)
 	}
 
@@ -86,4 +89,16 @@ func (rc *ResourceClient) GetCoreResources(namespace string, kinds []string, lab
 	}
 
 	return resources, nil
+}
+
+// GetResource fetches a specific resource by name
+func (rc *ResourceClient) GetResource(gvr schema.GroupVersionResource, namespace string, name string) (*unstructured.Unstructured, error) {
+	obj, err := rc.DynamicClient.Resource(gvr).Namespace(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		if IsAuthError(err) {
+			return nil, fmt.Errorf("authentication failed while fetching %s/%s: %w. Please check your kubeconfig and credentials", gvr.Resource, name, err)
+		}
+		return nil, err
+	}
+	return obj, nil
 }

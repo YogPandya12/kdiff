@@ -87,7 +87,7 @@ var clusterCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		compareResources(resources1, resources2)
+		compareResources(context1, context2, resources1, resources2)
 	},
 }
 
@@ -99,7 +99,7 @@ func init() {
 	clusterCmd.Flags().StringVarP(&labelSelector, "label", "l", "", "Selector (label query) to filter on")
 }
 
-func compareResources(res1, res2 map[string][]unstructured.Unstructured) {
+func compareResources(ctx1, ctx2 string, res1, res2 map[string][]unstructured.Unstructured) {
 	kinds := []string{"Deployment", "Service", "ConfigMap", "Secret"}
 
 	for _, kind := range kinds {
@@ -142,16 +142,34 @@ func compareResources(res1, res2 map[string][]unstructured.Unstructured) {
 				}
 
 				if hasDiff {
-					fmt.Printf("Mismatch: %s/%s\n", kind, name)
-					// TODO: Print diff or summary
+					additions := 0
+					deletions := 0
+					for _, d := range diffs {
+						if d.Type == "added" {
+							additions++
+						} else if d.Type == "removed" {
+							deletions++
+						}
+					}
+					fmt.Printf("Mismatch: %s/%s (+%d, -%d)\n", kind, name, additions, deletions)
+
+					// Print detailed diff
+					for _, d := range diffs {
+						if d.Type == "added" {
+							fmt.Printf("  [%s] + %s\n", ctx2, d.Line)
+						} else if d.Type == "removed" {
+							fmt.Printf("  [%s] + %s\n", ctx1, d.Line)
+						}
+					}
+					fmt.Println() // Add a newline for separation
 				} else {
-					fmt.Printf("Match: %s/%s\n", kind, name)
+					// fmt.Printf("Match: %s/%s\n", kind, name)
 				}
 
 			} else if exists1 {
-				fmt.Printf("Only in context1: %s/%s\n", kind, name)
+				fmt.Printf("Only in %s: %s/%s\n", ctx1, kind, name)
 			} else {
-				fmt.Printf("Only in context2: %s/%s\n", kind, name)
+				fmt.Printf("Only in %s: %s/%s\n", ctx2, kind, name)
 			}
 		}
 	}
