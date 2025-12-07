@@ -1,9 +1,5 @@
 # kdiff: The Kubernetes Configuration Diff & Validation Tool
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Go Version](https://img.shields.io/badge/go-1.24-blue.svg)
-![Build Status](https://github.com/YogPandya12/kdiff/actions/workflows/ci.yml/badge.svg)
-
 **kdiff** is a powerful, developer-friendly CLI tool designed to solve the "YAML Hell" in Kubernetes. It simplifies configuration management by providing real-time validation, semantic comparison, and drift detection for your Kubernetes manifests.
 
 ---
