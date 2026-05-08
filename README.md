@@ -24,13 +24,13 @@ Kubernetes configuration management is notoriously difficult. As your infrastruc
 *   **"It Works on My Machine"**: Deployments fail because of missing required fields, invalid types, or subtle schema violations that aren't caught until apply time.
 *   **Lack of Context**: Standard `diff` tools see text, not objects. They don't know that `replicas: 2` and `replicas: 3` is a scaling event, or that reordering fields in a map doesn't change the actual state.
 
-**kdelta** was built to solve these specific pain points. It's not just a text comparison tool; it's a Kubernetes-aware diff engine.
+**kdelta** was built to solve these specific pain points. It's not just a text comparison tool; it's a semantic infrastructure diff engine built for Kubernetes.
 
 ---
 
-## 🆚 Why kdelta Instead of kubectl diff?
+## 🆚 Why Use kdelta Alongside kubectl diff?
 
-kdelta focuses on semantic Kubernetes-aware comparison instead of raw text diffs. It removes noisy fields, highlights meaningful configuration changes, and supports drift detection across environments and clusters.
+kdelta complements existing Kubernetes tooling by providing semantic, Kubernetes-aware configuration analysis, noise reduction, and drift detection workflows that are difficult to achieve with traditional text-based diffs alone.
 
 ---
 
