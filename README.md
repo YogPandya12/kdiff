@@ -4,6 +4,17 @@
 
 ---
 
+## ✨ Current Features
+
+- YAML semantic comparison
+- Kubernetes schema validation
+- Live cluster resource comparison
+- Drift detection
+- Multi-cluster diffing
+- CLI interface with Cobra
+
+---
+
 ## 🛑 The Problem: Why kdelta?
 
 Kubernetes configuration management is notoriously difficult. As your infrastructure grows, you inevitably face "YAML Hell":
@@ -14,6 +25,28 @@ Kubernetes configuration management is notoriously difficult. As your infrastruc
 *   **Lack of Context**: Standard `diff` tools see text, not objects. They don't know that `replicas: 2` and `replicas: 3` is a scaling event, or that reordering fields in a map doesn't change the actual state.
 
 **kdelta** was built to solve these specific pain points. It's not just a text comparison tool; it's a Kubernetes-aware diff engine.
+
+---
+
+## 🆚 Why kdelta Instead of kubectl diff?
+
+kdelta focuses on semantic Kubernetes-aware comparison instead of raw text diffs. It removes noisy fields, highlights meaningful configuration changes, and supports drift detection across environments and clusters.
+
+---
+
+## 📸 Screenshots
+
+### Architecture
+[View the detailed Architecture Diagram](./docs/architecture.md)
+
+### Compare Command
+![Compare](./assets/compare.png)
+
+### Validate Command
+![Validate](./assets/validate.png)
+
+### Live Cluster Diff
+![Live](./assets/live.png)
 
 ---
 
@@ -31,6 +64,14 @@ Kubernetes configuration management is notoriously difficult. As your infrastruc
 ## 📖 Usage
 
 For detailed usage instructions and examples, please refer to the [User Guide](docs/usage.md).
+
+### Quick Example
+
+```bash
+kdelta compare base.yaml modified.yaml --output table
+```
+*(See the Compare Command screenshot above for the output!)*
+
 
 Here is a quick overview of the available commands:
 
